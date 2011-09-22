@@ -311,9 +311,7 @@ cdsurvival_SendNamedPlayerSpawn(SVPlayer *player, SVPlayer *other)
 				.pitch    = other->pitch,
 				.rotation = other->yaw,
 
-				.item = {
-					.id = 0
-				},
+				.itemId = 0,
 
 				.position = SV_PrecisePositionToAbsolutePosition(other->entity.position)
 			}

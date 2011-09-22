@@ -363,6 +363,8 @@ SV_GetPacketDataFromBuffer (SVPacket* self, CDBuffer* input)
 		case SVPlayerBlockPlacement: {
 			SVPacketPlayerBlockPlacement* packet = (SVPacketPlayerBlockPlacement*) CD_malloc(sizeof(SVPacketPlayerBlockPlacement));
 
+            memset(&packet->request.item, 0, sizeof(SVItemStack));
+
 			SV_BufferRemoveFormat(input, "ibibs",
 				&packet->request.position.x,
 				&packet->request.position.y,
@@ -375,7 +377,7 @@ SV_GetPacketDataFromBuffer (SVPacket* self, CDBuffer* input)
 			if (packet->request.item.id != -1) {
 				SV_BufferRemoveFormat(input, "bs",
 					&packet->request.item.count,
-					&packet->request.item.uses
+					&packet->request.item.damage
 				);
 			}
 
@@ -385,7 +387,7 @@ SV_GetPacketDataFromBuffer (SVPacket* self, CDBuffer* input)
 		case SVHoldChange: {
 			SVPacketHoldChange* packet = (SVPacketHoldChange*) CD_malloc(sizeof(SVPacketHoldChange));
 
-			packet->request.item.id = SV_BufferRemoveShort(input);
+			packet->request.slot = SV_BufferRemoveShort(input);
 
 			return (CDPointer) packet;
 		}
@@ -471,6 +473,8 @@ SV_GetPacketDataFromBuffer (SVPacket* self, CDBuffer* input)
 		case SVWindowClick: {
 			SVPacketWindowClick* packet = (SVPacketWindowClick*) CD_malloc(sizeof(SVPacketWindowClick));
 
+            memset(&packet->request.item, 0, sizeof(SVItemStack));
+
 			SV_BufferRemoveFormat(input, "bsBss",
 				&packet->request.id,
 				&packet->request.slot,
@@ -482,7 +486,7 @@ SV_GetPacketDataFromBuffer (SVPacket* self, CDBuffer* input)
 			if (packet->request.item.id != -1) {
 				SV_BufferRemoveFormat(input, "bs",
 					&packet->request.item.count,
-					&packet->request.item.uses
+					&packet->request.item.damage
 				);
 			}
 
@@ -707,7 +711,7 @@ SV_PacketToBuffer (SVPacket* self)
 						packet->response.position.z,
 						packet->response.rotation,
 						packet->response.pitch,
-						packet->response.item
+						packet->response.itemId
 					);
 				} break;
 
@@ -718,7 +722,7 @@ SV_PacketToBuffer (SVPacket* self)
 						packet->response.entity.id,
 						packet->response.item.id,
 						packet->response.item.count,
-						packet->response.item.uses,
+						packet->response.item.damage,
 						packet->response.position.x,
 						packet->response.position.y,
 						packet->response.position.z,
@@ -1073,15 +1077,15 @@ SV_PacketToBuffer (SVPacket* self)
 					SVPacketSetSlot* packet = (SVPacketSetSlot*) self->data;
 
 					SV_BufferAddFormat(data, "bss",
-						packet->response.id,
-						packet->response.slot,
+						packet->response.windowId,
+						packet->response.item.slot,
 						packet->response.item.id
 					);
 
 					if (packet->response.item.id != -1) {
 						SV_BufferAddFormat(data, "bs",
 							packet->response.item.count,
-							packet->response.item.uses
+							packet->response.item.damage
 						);
 					}
 				} break;
@@ -1100,8 +1104,9 @@ SV_PacketToBuffer (SVPacket* self)
 							SV_BufferAddFormat(data, "sbs",
 								packet->response.item[i].id,
 								packet->response.item[i].count,
-								packet->response.item[i].uses
+								packet->response.item[i].damage
 							);
+                            packet->response.item[i].slot = -1;
 						}
 					}
 				} break;
