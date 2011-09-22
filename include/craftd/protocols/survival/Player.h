@@ -54,6 +54,8 @@ typedef struct _SVPlayer {
      */
     CDMap* inventory;
 
+    SVShort currentSlot; // the slot id that the player is holding
+
 	CD_DEFINE_DYNAMIC;
 	CD_DEFINE_ERROR;
 } SVPlayer;

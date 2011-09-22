@@ -719,6 +719,12 @@ cdsurvival_ClientProcess (CDServer* server, CDClient* client, SVPacket* packet)
 			CD_DestroyBuffer(data);
 		} break;
 
+        case SVHoldChange: {
+            SVPacketHoldChange* data = (SVPacketHoldChange*) packet->data;
+			CD_EventDispatch(server, "Player.holdChange", player, data->request.slot);
+        } break;
+
+
 		default: {
 			if (player) {
 				SERR(server, "unimplemented packet 0x%.2X from %s (%s)", packet->type,

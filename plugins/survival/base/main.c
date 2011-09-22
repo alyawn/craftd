@@ -38,6 +38,9 @@ static struct {
 
 #include "callbacks.c"
 
+//Callbacks specific to player inventory management
+#include "inventory.c"
+
 static
 void
 cdsurvival_TimeIncrease (void* _, void* __, CDServer* server)
@@ -212,7 +215,9 @@ CD_PluginInitialize (CDPlugin* self)
 	CD_EventProvides(self->server, "Player.login", CD_CreateEventParameters("SVPlayer", "bool", NULL));
 	CD_EventProvides(self->server, "Player.logout", CD_CreateEventParameters("SVPlayer", "bool", NULL));
 	CD_EventProvides(self->server, "Player.chat", CD_CreateEventParameters("SVPlayer", "CDString", NULL));
-
+    
+    CD_EventProvides(self->server, "Player.holdChange", CD_CreateEventParameters("SVPlayer", "SVShort", NULL));
+    CD_EventRegister(self->server, "Player.holdChange", (CDEventCallbackFunction) cdsurvival_PlayerHoldChange);
 
 	return true;
 }
@@ -242,6 +247,8 @@ CD_PluginFinalize (CDPlugin* self)
 	CD_EventUnregister(self->server, "Player.destroy", cdsurvival_PlayerDestroy);
 	CD_EventUnregister(self->server, "Client.kick", cdsurvival_ClientKick);
 	CD_EventUnregister(self->server, "Client.disconnect", (CDEventCallbackFunction) cdsurvival_ClientDisconnect);
+
+    CD_EventUnregister(self->server, "Player.holdChange", (CDEventCallbackFunction) cdsurvival_PlayerHoldChange);
 
 	pthread_mutex_destroy(&_lock.login);
 
