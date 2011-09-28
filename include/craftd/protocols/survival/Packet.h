@@ -277,7 +277,7 @@ typedef union _SVPacketRespawn {
     	SVByte mode;
     	SVShort worldHeight;
     	SVLong mapSeed;
-    } responce;
+    } response;
 } SVPacketRespawn;
 
 typedef union _SVPacketOnGround {
@@ -647,7 +647,7 @@ typedef union _SVPacketExperience {
 	struct {
 		SVByte currentExperience;
 		SVByte level;
-		SVByte totalExperience;
+		SVShort totalExperience;
 	} response;
 } SVPacketExperience;
 
@@ -732,7 +732,7 @@ typedef union _SVPacketSoundEffect {
 			SVBlockBreak = 2001
 		} effect; //int
 
-		SVAbsolutePosition position;
+		SVBlockPosition position;
 
 		enum {
 			SVSouthEast = 0,
@@ -893,6 +893,10 @@ typedef union _SVPacketIncrementStatistic {
 		SVInteger id;
 		SVByte    amount;
 	} request;
+	struct {
+		SVInteger id;
+		SVByte    amount;
+	} response;
 } SVPacketIncrementStatistic;
 
 typedef union _SVPacketPlayerListItem {
@@ -927,7 +931,7 @@ typedef union _SVPacketDisconnect {
  *
  * @return The instantiated Packet object
  */
-SVPacket* SV_PacketFromBuffers (CDBuffers* buffers);
+SVPacket* SV_PacketFromBuffers (CDBuffers* buffers, bool isResponse);
 
 /**
  * Destroy a Packet object
