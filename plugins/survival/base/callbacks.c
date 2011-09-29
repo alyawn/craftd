@@ -232,15 +232,16 @@ static
 void
 cdsurvival_SendPacketToAllInRegion(SVPlayer *player, SVPacket *pkt)
 {
-  CDList *seenPlayers = (CDList *) CD_DynamicGet(player, "Player.seenPlayers");
+    CDList *seenPlayers = (CDList *) CD_DynamicGet(player, "Player.seenPlayers");
 
-  CD_LIST_FOREACH(seenPlayers, it)
-  {
-	if ( player != (SVPlayer *) CD_ListIteratorValue(it) )
-	  SV_PlayerSendPacket( (SVPlayer *) CD_ListIteratorValue(it), pkt );
-	else
-	  CERR("We have a player with himself in the List????");
-  }
+    CD_LIST_FOREACH(seenPlayers, it)
+    {
+        if ( player != (SVPlayer *) CD_ListIteratorValue(it) ) {
+            SV_PlayerSendPacket( (SVPlayer *) CD_ListIteratorValue(it), pkt );
+        } else {
+            CERR("We have a player with himself in the List????");
+        }
+    }
 }
 
 static
@@ -724,6 +725,15 @@ cdsurvival_ClientProcess (CDServer* server, CDClient* client, SVPacket* packet)
 			CD_EventDispatch(server, "Player.holdChange", player, data->request.slot);
         } break;
 
+        case SVCreativeInventoryAction: {
+            SVPacketCreativeInventoryAction* data = (SVPacketCreativeInventoryAction*) packet->data;
+            SVItemStack stack;
+                stack.id     = data->request.itemId;
+                stack.slot   = data->request.slot;
+                stack.damage = data->request.damage;
+                stack.count  = data->request.quantity;
+            CD_EventDispatch(server, "Player.inventoryCreative", player, stack);
+        } break;
 
 		default: {
 			if (player) {
