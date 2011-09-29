@@ -37,7 +37,7 @@
 
 static
 bool
-cdsurvival_SendChunk (CDServer* server, SVPlayer* player, SVChunkPosition* coord)
+cdsurvival_SendPreChunk (CDServer* server, SVPlayer* player, SVChunkPosition* coord)
 {
 	DO {
 		SVPacketPreChunk pkt = {
@@ -51,7 +51,14 @@ cdsurvival_SendChunk (CDServer* server, SVPlayer* player, SVChunkPosition* coord
 
 		SV_PlayerSendPacketAndCleanData(player, &response);
 	}
+    return true;
+}
 
+
+static
+bool
+cdsurvival_SendChunk (CDServer* server, SVPlayer* player, SVChunkPosition* coord)
+{
 	DO {
 		SDEBUG(server, "sending chunk (%d, %d)", coord->x, coord->z);
 
@@ -151,6 +158,7 @@ cdsurvival_ChunkRadiusLoad (CDSet* self, SVChunkPosition* coord, SVPlayer* playe
 	assert(coord);
 	assert(player);
 
+    cdsurvival_SendPreChunk(player->client->server, player, coord);
 	cdsurvival_SendChunk(player->client->server, player, coord);
 }
 
@@ -470,81 +478,7 @@ cdsurvival_ClientProcess (CDServer* server, CDClient* client, SVPacket* packet)
 
 			// The player is now added to the world and logged-in.
 
-			DO {
-				SVPacketLogin pkt = {
-					.response = {
-						.id         = player->entity.id,
-						.u1 = CD_CreateStringFromCString(""),
-						.mapSeed    = 971768181197178410,
-						.serverMode = world->mode,
-						.dimension  = world->dimension,
-						.u2         = world->difficulty,
-						.worldHeight = 128,
-						.maxPlayers = 10 //server->maxClients
-					}
-				};
-				SVPacket response = { SVResponse, SVLogin, (CDPointer) &pkt };
-
-				SLOG(server, LOG_INFO, "%s responding with entity id %d", CD_StringContent(player->username), player->entity.id);
-
-			   SV_PlayerSendPacketAndCleanData(player, &response);
-			}
-
-			SVChunkPosition spawnChunk = SV_BlockPositionToChunkPosition(world->spawnPosition);
-
-			// Hack in a square send for login
-			for (int i = -7; i < 8; i++) {
-				for ( int j = -7; j < 8; j++) {
-					SVChunkPosition coords = {
-						.x = spawnChunk.x + i,
-						.z = spawnChunk.z + j
-					};
-
-					if (!cdsurvival_SendChunk(server, player, &coords)) {
-						return false;
-					}
-				}
-			}
-
-			/* Send Spawn Position to initialize compass */
-			DO {
-				SVPacketSpawnPosition pkt = {
-					.response = {
-						.position = world->spawnPosition
-					}
-				};
-
-				SVPacket response = { SVResponse, SVSpawnPosition, (CDPointer) &pkt };
-
-				SV_PlayerSendPacketAndCleanData(player, &response);
-			}
-
-			DO {
-				SVPrecisePosition pos = SV_BlockPositionToPrecisePosition(world->spawnPosition);
-				SVPacketPlayerMoveLook pkt = {
-					.response = {
-						.position = {
-							.x = pos.x,
-							.y = pos.y + 6,
-							.z = pos.z
-						},
-
-						.stance = pos.y + 6.1,
-						.yaw    = 0,
-						.pitch  = 0,
-
-						.is = {
-							.onGround = false
-						}
-					}
-				};
-
-				SVPacket response = { SVResponse, SVPlayerMoveLook, (CDPointer) &pkt };
-
-				SV_PlayerSendPacketAndCleanData(player, &response);
-			}
-
-			CD_EventDispatch(server, "Player.login", player, true);
+			CD_EventDispatch(server, "Player.prelogin", player);
 		} break;
 
 		case SVHandshake: {
@@ -763,6 +697,7 @@ cdsurvival_ClientConnect (CDServer* server, CDClient* client)
 	return true;
 }
 
+
 static
 bool
 cdsurvival_PlayerLogin (CDServer* server, SVPlayer* player, int status)
@@ -771,21 +706,154 @@ cdsurvival_PlayerLogin (CDServer* server, SVPlayer* player, int status)
 		return true;
 	}
 
-	DO {
-		SVPacketTimeUpdate pkt = {
-			.response = {
-				.time = SV_WorldGetTime(player->world)
-			}
-		};
+    SVChunkPosition spawnChunk = SV_BlockPositionToChunkPosition(player->world->spawnPosition);
 
-		SVPacket packet = { SVResponse, SVTimeUpdate, (CDPointer) &pkt };
+    // [TODO] Move this to a chunk handling plugini and make configurable!
+    int maxRadius = 10;
 
-		SV_PlayerSendPacket(player, &packet);
+    // Send out the pre chunk messages to the client. Order here
+    // isn't important.
+    DO {
+
+        for (int i = -maxRadius; i <= maxRadius; i++) {
+            for (int j = -maxRadius; j <= maxRadius; j++) {
+                SVChunkPosition coords = {
+                    .x = spawnChunk.x + i,
+                    .z = spawnChunk.z + j
+                };
+                if (!cdsurvival_SendPreChunk(server, player, &coords))
+                    return false;
+            }
+        }
+    }
+
+    DO {
+        SVPrecisePosition pos = SV_BlockPositionToPrecisePosition(player->world->spawnPosition);
+        SVPacketPlayerMoveLook pkt = {
+            .response = {
+                .position = {
+                    .x = pos.x,
+                    .y = pos.y + 6,
+                    .z = pos.z
+                },
+
+                .stance = pos.y + 6.1,
+                .yaw    = 0,
+                .pitch  = 0,
+
+                .is = {
+                    .onGround = false
+                }
+            }
+        };
+
+        SVPacket response = { SVResponse, SVPlayerMoveLook, (CDPointer) &pkt };
+        SV_PlayerSendPacketAndCleanData(player, &response);
 	}
+
+
+    // Send out the chunk data emenating from the spawn chunk
+    DO {
+        SVChunkPosition coords = {
+            .x = spawnChunk.x,
+            .z = spawnChunk.z
+        };
+
+        if (!cdsurvival_SendChunk(server, player, &coords)) {
+            return false;
+        }
+
+        for (int r = 1; r <= maxRadius; r++) {
+            int j,k;
+
+            j = k = -r;
+
+            for (; j <= r; j++) {
+                coords.x = spawnChunk.x+j;
+                coords.z = spawnChunk.z+k;
+                if (!cdsurvival_SendChunk(server, player, &coords))
+                    return false;
+            }
+
+            for (j = r, k+=1; k <= r; k++) {
+                coords.x = spawnChunk.x+j;
+                coords.z = spawnChunk.z+k;
+                if (!cdsurvival_SendChunk(server, player, &coords))
+                    return false;
+            }
+
+
+            for (k = r, j-=1; j >= -r; j--) {
+                coords.x = spawnChunk.x+j;
+                coords.z = spawnChunk.z+k;
+                if (!cdsurvival_SendChunk(server, player, &coords))
+                    return false;
+            }
+
+
+            for (j = -r, k-=1; k > -r; k--) {
+                coords.x = spawnChunk.x+j;
+                coords.z = spawnChunk.z+k;
+                if (!cdsurvival_SendChunk(server, player, &coords))
+                    return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+static
+bool
+cdsurvival_PlayerPreLogin (CDServer* server, SVPlayer* player)
+{
 
 	SV_WorldBroadcastMessage(player->world, SV_StringColor(CD_CreateStringFromFormat("%s has joined the game",
 				CD_StringContent(player->username)), SVColorYellow));
 
+    DO {
+        SVPacketLogin pkt = {
+            .response = {
+                .id         = player->entity.id,
+                .u1 = CD_CreateStringFromCString(""),
+                .mapSeed    = 971768181197178410,
+                .serverMode = player->world->mode,
+                .dimension  = player->world->dimension,
+                .u2         = player->world->difficulty,
+                .worldHeight = 128,
+                .maxPlayers = 10 //server->maxClients
+            }
+        };
+        SVPacket response = { SVResponse, SVLogin, (CDPointer) &pkt };
+
+        SLOG(server, LOG_INFO, "%s responding with entity id %d", CD_StringContent(player->username), player->entity.id);
+
+        SV_PlayerSendPacketAndCleanData(player, &response);
+    }
+
+    /* Send Spawn Position to initialize compass */
+    DO {
+        SVPacketSpawnPosition pkt = {
+            .response = {
+                .position = player->world->spawnPosition
+            }
+        };
+
+        SVPacket response = { SVResponse, SVSpawnPosition, (CDPointer) &pkt };
+
+        SV_PlayerSendPacketAndCleanData(player, &response);
+    }
+
+    DO {
+        SVPacketTimeUpdate pkt = {
+            .response = {
+                .time = SV_WorldGetTime(player->world)
+            }
+        };
+
+        SVPacket packet = { SVResponse, SVTimeUpdate, (CDPointer) &pkt };
+        SV_PlayerSendPacket(player, &packet);
+	}
 
 	CD_DynamicPut(player, "Player.loadedChunks", (CDPointer) CD_CreateSetWith(
 		400, (CDSetCompare) SV_CompareChunkPosition, (CDSetHash) SV_HashChunkPosition));
@@ -795,6 +863,8 @@ cdsurvival_PlayerLogin (CDServer* server, SVPlayer* player, int status)
 	SVChunkPosition playerChunk = SV_PrecisePositionToChunkPosition(player->entity.position);
 
 	cdsurvival_CheckPlayersInRegion(server, player, &playerChunk, 5);
+
+    CD_EventDispatch(server, "Player.login", player, true);
 
 	return true;
 }
