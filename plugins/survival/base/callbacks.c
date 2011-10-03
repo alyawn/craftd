@@ -256,7 +256,7 @@ static
 void
 cdsurvival_SendUpdatePos(SVPlayer* player, SVPrecisePosition* newPosition, bool andLook, SVFloat pitch, SVFloat yaw)
 {
-	if (cdsurvival_DistanceGreater(player->entity.position, *newPosition, 2) || true) {
+	if (cdsurvival_DistanceGreater(player->entity.position, *newPosition, 4) || true) {
 		DO {
 			SVPacketEntityTeleport pkt;
 

@@ -10,7 +10,11 @@ cdsurvival_PlayerHoldChange (CDServer* server, SVPlayer* player, SVShort slot)
 
     SDEBUG(server, "%s was holding slot %d, now: %d", CD_StringContent(player->username), player->currentSlot, slot); 
 
-    player->currentSlot = slot;
+    // This expects slot to be a number from 0-8.
+    if (slot < 0 || slot > 8) return true;
+
+    // The first quick-launch slot starts with index 36.
+    player->currentSlot = slot + 36;
 
     SVItemStack* current = (SVItemStack*)CD_MapGet(player->inventory, player->currentSlot);
 
@@ -22,6 +26,7 @@ cdsurvival_PlayerHoldChange (CDServer* server, SVPlayer* player, SVShort slot)
             .damage = (current ? current->damage : 0)
         }
     };
+
 
     SVPacket response = { SVResponse, SVEntityEquipment, (CDPointer) &pkt };
 
