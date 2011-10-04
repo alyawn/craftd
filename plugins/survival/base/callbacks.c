@@ -631,6 +631,8 @@ cdsurvival_ClientProcess (CDServer* server, CDClient* client, SVPacket* packet)
                                     CD_StringContent(player->username));
                             CD_ServerKick(server, client, CD_CreateStringFromCString("You tried to dig to far! Hacking?"));
                         }
+                    } else if (data->request.status == SVDropItem) {
+                        CD_EventDispatch(server, "Player.dropItem", player);
                     }
                 } break;
 

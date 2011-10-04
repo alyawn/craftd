@@ -1,4 +1,5 @@
 
+
 /**
  * Event callback functions relating to player inventory management.
  */
@@ -49,6 +50,47 @@ cdsurvival_PlayerInventoryCreative (CDServer* server, SVPlayer* player, SVItemSt
         CD_MapPut(player->inventory, stack.slot, (CDPointer)copy);
 
     }
+
+    return true;
+}
+
+static
+bool
+cdsurvival_PlayerDropItem (CDServer* server, SVPlayer* player)
+{
+    SVItemStack* current = (SVItemStack*)CD_MapGet(player->inventory, player->currentSlot);
+
+    SDEBUG(server, "%s dropped current item: %d slot: %d", CD_StringContent(player->username), (current ? current->id : -1), player->currentSlot);
+
+    if (current) {
+        current->count -= 1;
+
+        SVPacketSetSlot pkt = {
+            .response = {
+                .windowId = 0,
+                .item = {
+                    .id = current->id,
+                    .slot = player->currentSlot,
+                    .damage = current->damage,
+                    .count = current->count
+                }
+            }
+        };
+
+        if (current->count <= 0) {
+            CD_MapDelete(player->inventory, player->currentSlot);
+            CD_free(current);
+            current = NULL;
+            pkt.response.item.id = -1;
+        }
+
+        SVPacket response = { SVResponse, SVSetSlot, (CDPointer) &pkt };
+        SV_PlayerSendPacketAndCleanData(player, &response);
+    }
+
+
+    // [TODO] need a better way to index inventory slots. This event wants slots as 0-8
+    CD_EventDispatch(server, "Player.holdChange", player, player->currentSlot - 36); 
 
     return true;
 }

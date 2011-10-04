@@ -214,6 +214,7 @@ CD_PluginInitialize (CDPlugin* self)
 	CD_EventRegister(self->server, "Client.disconnect", (CDEventCallbackFunction) cdsurvival_ClientDisconnect);
     CD_EventRegister(self->server, "Player.holdChange", (CDEventCallbackFunction) cdsurvival_PlayerHoldChange);
     CD_EventRegister(self->server, "Player.inventoryCreative", (CDEventCallbackFunction) cdsurvival_PlayerInventoryCreative);
+    CD_EventRegister(self->server, "Player.dropItem", (CDEventCallbackFunction) cdsurvival_PlayerDropItem);
 
     CD_EventProvides(self->server, "Player.prelogin", CD_CreateEventParameters("SVPlayer", NULL));
 	CD_EventProvides(self->server, "Player.login", CD_CreateEventParameters("SVPlayer", "bool", NULL));
@@ -222,6 +223,7 @@ CD_PluginInitialize (CDPlugin* self)
 
     CD_EventProvides(self->server, "Player.holdChange", CD_CreateEventParameters("SVPlayer", "SVShort", NULL));
     CD_EventProvides(self->server, "Player.inventoryCreative", CD_CreateEventParameters("SVPlayer", "SVItemStack", NULL));
+    CD_EventProvides(self->server, "Player.dropItem", CD_CreateEventParameters("SVPlayer", NULL));
 
     SDEBUG(self->server, "Survival Plugin initialized");
 
