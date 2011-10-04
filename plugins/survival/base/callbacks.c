@@ -642,19 +642,24 @@ cdsurvival_ClientProcess (CDServer* server, CDClient* client, SVPacket* packet)
 			CD_ServerKick(server, client, CD_CloneString(data->request.reason));
 		} break;
 
-		case SVListPing:
-		{
-			//TODO: need to add in some way to get the maximum slots the server can have (eg 20)
-			SVPacketDisconnect pkt = {
-				.ping = {
-				   .description = CD_CreateStringFromCString("Craftd Server\u00A70\u00A70")
-				}
-			};
-			SVPacket  packet = { SVPing, SVDisconnect, (CDPointer) &pkt };
-			CDBuffer* data = SV_PacketToBuffer(&packet);
-			CD_ClientSendBuffer(client, data);
-			CD_DestroyBuffer(data);
-		} break;
+        case SVListPing:
+        {
+            SVPacketDisconnect pkt = {
+                .ping = {
+                    .description =
+                        CD_CreateStringFromFormat(PACKAGE_STRING "§%d§%d",
+                            server->clients->length,
+                            server->config->cache.game.clients.max)
+                }
+            };
+            SVPacket  packet = { SVPing, SVDisconnect, (CDPointer) &pkt };
+            CDBuffer* data = SV_PacketToBuffer(&packet);
+            CD_ClientSendBuffer(client, data);
+            CD_DestroyBuffer(data);
+
+            SDEBUG(server, "sent ping response: %s", CD_StringContent(pkt.ping.description));
+            CD_DestroyString(pkt.ping.description);
+        } break;
 
         case SVHoldChange: {
             SVPacketHoldChange* data = (SVPacketHoldChange*) packet->data;
