@@ -47,8 +47,10 @@ typedef enum _SVWorldMode {
 } SVWorldMode;
 
 typedef enum _SVWorldDifficulty {
-    SVDifficultyNormal = 1,
-    SVDifficultyHard   = 2
+    SVDifficultyPeaceful = 0,
+    SVDifficultyEasy     = 1,
+    SVDifficultyNormal   = 2,
+    SVDifficultyHard     = 3
 } SVWorldDifficulty;
 
 typedef struct _SVWorld {

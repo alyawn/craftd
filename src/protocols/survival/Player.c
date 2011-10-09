@@ -43,7 +43,6 @@ SV_CreatePlayer (CDClient* client)
 	self->entity.position.z = 0;
     self->currentSlot       = -1;
 
-
 	self->username = NULL;
 	self->world    = NULL;
 
