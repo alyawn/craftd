@@ -815,9 +815,6 @@ bool
 cdsurvival_PlayerPreLogin (CDServer* server, SVPlayer* player)
 {
 
-	SV_WorldBroadcastMessage(player->world, SV_StringColor(CD_CreateStringFromFormat("%s has joined the game",
-				CD_StringContent(player->username)), SVColorYellow));
-
     DO {
         SVPacketLogin pkt = {
             .response = {
@@ -828,7 +825,7 @@ cdsurvival_PlayerPreLogin (CDServer* server, SVPlayer* player)
                 .dimension  = player->world->dimension,
                 .u2         = player->world->difficulty,
                 .worldHeight = 128,
-                .maxPlayers = 10 //server->maxClients
+                .maxPlayers = server->config->cache.game.clients.max
             }
         };
         SVPacket response = { SVResponse, SVLogin, (CDPointer) &pkt };
@@ -882,9 +879,6 @@ cdsurvival_PlayerLogout (CDServer* server, SVPlayer* player)
 {
 	assert(player);
 
-	SV_WorldBroadcastMessage(player->world, SV_StringColor(CD_CreateStringFromFormat("%s has left the game",
-		CD_StringContent(player->username)), SVColorYellow));
-
 	CDList* seenPlayers = (CDList*) CD_DynamicDelete(player, "Player.seenPlayers");
 
 	if (seenPlayers) {
@@ -895,9 +889,6 @@ cdsurvival_PlayerLogout (CDServer* server, SVPlayer* player)
 			cdsurvival_SendDestroyEntity(other, &player->entity);
 			CD_ListDeleteAll(otherSeenPlayers, (CDPointer) player);
 		}
-
-		CD_HashDelete(player->world->players, CD_StringContent(player->username));
-		CD_MapDelete(player->world->entities, player->entity.id);
 
 		CD_DestroyList(seenPlayers);
 	}
